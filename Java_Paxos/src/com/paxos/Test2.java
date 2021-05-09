@@ -14,15 +14,15 @@ import java.util.concurrent.locks.ReentrantLock;
  * @Description: 测试
  * @date 2020/6/24/16:15
  */
-public class Test {
+public class Test2 {
 
     private static ExecutorService executorService = Executors.newFixedThreadPool(10);
     //接受者集合（全部）
-    private static List<Acceptor> acceptorList=new ArrayList<>();
+    private static List<Acceptor> acceptorList=new ArrayList<Acceptor>();
     //接受者集合（过半）
     private static List<Acceptor> acceptorListQuorum=new ArrayList<>();
     //提交者集合
-    private static List<Proposer> proposerList=new ArrayList<>();
+    private static List<com.paxos.Proposer> proposerList=new ArrayList<>();
     private static Thread thread;
     private static Thread runnable;
 
@@ -40,8 +40,8 @@ public class Test {
 //        }
 
         //初始化提交者proposer
-        for (int i = 1; i <= Common.PROPOSER_COUNT; i++) {
-            Proposer proposer = new Proposer();
+        for (int i = 1; i <= com.paxos.Common.PROPOSER_COUNT; i++) {
+            com.paxos.Proposer proposer = new com.paxos.Proposer();
             proposer.setId(i);
             proposer.setProporsal(new HashMap<>());
             proposerList.add(proposer);
@@ -55,11 +55,11 @@ public class Test {
         ArrayList<Integer> ids = new ArrayList<>();
         Random random = new Random();
         for (;;) {
-            int id = random.nextInt(Common.ACCEPTOR_COUNT)+1;
+            int id = random.nextInt(com.paxos.Common.ACCEPTOR_COUNT)+1;
             if(ids.contains(id)){
                 continue;
             }
-            double ceil = (Common.ACCEPTOR_COUNT / 2)+1;
+            double ceil = (com.paxos.Common.ACCEPTOR_COUNT / 2)+1;
             if(ids.size()==ceil){
                 break;
             }
@@ -96,9 +96,9 @@ public class Test {
     public static void main(String[] args) throws InterruptedException {
         init();
 
-        int id = RandomUtils.randomProposerId();//宕机id
+        int id = com.paxos.RandomUtils.randomProposerId();//宕机id
         for (int i = 0; i < proposerList.size(); i++) {
-            Proposer proposer = proposerList.get(i);
+            com.paxos.Proposer proposer = proposerList.get(i);
             if(id!=proposer.getId()){//使用Random来模拟网络通信阻塞（宕机）
                 runnable = new Thread() {
                     @Override
@@ -117,7 +117,7 @@ public class Test {
 
         Thread.sleep(4000);
         //宕机的机器重启了
-        for (Proposer proposer1 : proposerList) {
+        for (com.paxos.Proposer proposer1 : proposerList) {
             if(proposer1.getId()==id){//找到宕机的机器
                 thread = new Thread() {//模拟重启
                     @Override
@@ -138,14 +138,14 @@ public class Test {
     }
 
 
-    public static void guocheng( Proposer proposer) throws InterruptedException {
+    public static void guocheng( com.paxos.Proposer proposer) throws InterruptedException {
         //1、生成提案
         // 先判断（学习）之前的接受者里面有没有接受之前提议者的提案,没有就自己生成一个提案
         //如果有接受者已经接受了之前提议者的提案，无论自己的提案编号大还是小，都得把自己的提案的value指定为之前的那个提案的value
         randomAcceptorQuorum();
         if(!chackAccept()){//没有接受过提案
             HashMap<Integer, String> map = new HashMap<>();
-            map.put(Common.proposerN.incrementAndGet(),"提案"+proposer.getId());
+            map.put(com.paxos.Common.proposerN.incrementAndGet(),"提案-"+proposer.getId());
             proposer.setProporsal(map);
         }else{
             //之前有接受者接受过提案,只能乖乖用之前的提案值（也就是Map的value使用之前的提案的）
@@ -155,7 +155,7 @@ public class Test {
                 if(proporsal.size()!=0){
                     for (Map.Entry<Integer, String> entry : proporsal.entrySet()) {
                         Map<Integer, String> map = new HashMap<>();
-                        map.put(Common.proposerN.incrementAndGet(),entry.getValue());
+                        map.put(com.paxos.Common.proposerN.incrementAndGet(),entry.getValue());
                         proposer.setProporsal(map);
                         break;
                     }
@@ -204,7 +204,7 @@ public class Test {
         //阶段2，accept请求
         randomAcceptorQuorum();
         AtomicInteger aokCount=new AtomicInteger(0);
-        Boolean half = chackHalf(Common.ACCEPTOR_COUNT, var2.intValue());
+        Boolean half = chackHalf(com.paxos.Common.ACCEPTOR_COUNT, var2.intValue());
         if(half){
             for (Acceptor acceptor : acceptorListQuorum) {
                 String req = acceptor.acceptReq(proporsal);
@@ -216,7 +216,7 @@ public class Test {
             guocheng(proposer);
         }
         //如果过半，V被确定，不过半，重新发起Prepare请求
-        Boolean var4 = chackHalf(Common.ACCEPTOR_COUNT, aokCount.intValue());
+        Boolean var4 = chackHalf(com.paxos.Common.ACCEPTOR_COUNT, aokCount.intValue());
         if(var4){
             //输出一下每个acceptor的AcceptV
             for (Acceptor acceptor : acceptorListQuorum) {
